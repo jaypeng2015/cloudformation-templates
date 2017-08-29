@@ -1,0 +1,36 @@
+{
+  "name": "cloudformation-templates",
+  "version": "1.0.0",
+  "description": "AWS CloudFormation template examples.",
+  "scripts": {
+    "deploy": "bash scripts/deploy.sh",
+    "lint": "eslint templates/**/*.json",
+    "lint:staged": "lint-staged",
+    "show": "scripts/show-stack.sh",
+    "validate": "scripts/validate-template.sh"
+  },
+  "lint-staged": {
+    "*.json": "npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaypeng2015/cloudformation-templates.git"
+  },
+  "keywords": [
+    "CloudFormation"
+  ],
+  "author": "Jingwei Peng",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jaypeng2015/cloudformation-templates/issues"
+  },
+  "homepage": "https://github.com/jaypeng2015/cloudformation-templates#readme",
+  "devDependencies": {
+    "eslint": "^4.5.0",
+    "eslint-plugin-json": "^1.2.0",
+    "lint-staged": "^4.0.4",
+    "pre-commit": "^1.2.2"
+  },
+  "dependencies": {},
+  "pre-commit": "lint:staged"
+}

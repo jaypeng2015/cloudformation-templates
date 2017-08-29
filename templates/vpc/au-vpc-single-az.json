@@ -1,0 +1,174 @@
+{
+  "Description" : "VPC CloudFormation Template for A Single AZ VPC",
+  "Parameters" : {
+    "VpcNamePrefix" : {
+      "Type" : "String",
+      "Default" : "vicinity",
+      "Description" : "The prefix for the structures created by this template."
+    }
+  },
+  "Resources" : {
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "CidrBlock" : "10.14.0.0/16",
+        "EnableDnsSupport" : "true",
+        "EnableDnsHostnames" : "true",
+        "InstanceTenancy" : "default",
+        "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Join" : [ "", [ {"Ref": "VpcNamePrefix"}, "-vpc"] ] } } ]
+      }
+    },
+    "InternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {
+        "Tags" : [  {
+          "Key" : "Name",
+          "Value" : { "Fn::Join" : [ "", [ {"Ref": "VpcNamePrefix"}, "-igw"] ] }
+        } ]
+       }
+    },
+    "InternetGatewayAttachment" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "InternetGatewayId" : { "Ref" : "InternetGateway" },
+        "VpcId" :  { "Ref" : "VPC" }
+      }
+    },
+    "PublicSubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "AvailabilityZone" : "ap-southeast-2a",
+        "CidrBlock" : "10.14.0.0/24",
+        "MapPublicIpOnLaunch" : "true",
+        "Tags" : [
+            { "Key" : "Name", "Value" : "au-public-a" }
+        ],
+        "VpcId" : { "Ref" : "VPC" }
+      }
+    },
+    "PrivateSubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "AvailabilityZone" : "ap-southeast-2a",
+        "CidrBlock" : "10.14.4.0/24",
+        "MapPublicIpOnLaunch" : "false",
+        "Tags" : [
+            { "Key" : "Name", "Value" : "au-private-a" }
+        ],
+        "VpcId" : { "Ref" : "VPC" }
+      }
+    },
+    "DBSubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "AvailabilityZone" : "ap-southeast-2a",
+        "CidrBlock" : "10.14.8.0/24",
+        "MapPublicIpOnLaunch" : "false",
+        "Tags" : [
+            { "Key" : "Name", "Value" : "au-db-a" }
+        ],
+        "VpcId" : { "Ref" : "VPC" }
+      }
+    },
+    "NATGW" : {
+       "Type" : "AWS::EC2::NatGateway",
+      "Properties" : {
+        "SubnetId" : { "Ref": "PublicSubnetA" },
+        "AllocationId" : { "Fn::GetAtt" : ["EIP", "AllocationId"]}
+      }
+    },
+    "EIP" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+        "Domain" : "vpc"
+      }
+    },
+    "RouteTablePublic" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "Tags" : [ {
+          "Key" : "Name",
+          "Value" : { "Fn::Join" : [ "-", [ {"Ref": "VpcNamePrefix"}, "public-rt" ] ] }
+        }]
+      }
+    },
+    "RouteTablePrivate" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "DependsOn" : "NATGW",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "Tags" : [ {
+          "Key" : "Name",
+          "Value" : { "Fn::Join" : [ "-", [ {"Ref": "VpcNamePrefix"}, "private-rt" ] ] }
+        }]
+      }
+    },
+    "PublicDefaultRoute" : {
+       "Type" : "AWS::EC2::Route",
+       "Properties" : {
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "InternetGateway" },
+        "RouteTableId" : { "Ref" : "RouteTablePublic" }
+       }
+    },
+    "PrivateDefaultRoute" : {
+      "DependsOn" : "NATGW",
+       "Type" : "AWS::EC2::Route",
+       "Properties" : {
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "NatGatewayId" : { "Ref" : "NATGW" },
+        "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+       }
+    },
+    "AssociationPublicA" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "PublicSubnetA" },
+        "RouteTableId" : { "Ref" : "RouteTablePublic" }
+      }
+    },
+    "AssociationPrivateA" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "PrivateSubnetA" },
+        "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+      }
+    },
+    "VpcEndPoint" : {
+      "Type" : "AWS::EC2::VPCEndpoint",
+        "Properties" : {
+          "PolicyDocument" : {
+            "Version" : "2012-10-17",
+            "Statement" : [{
+              "Effect" : "Allow",
+              "Principal" : "*",
+              "Action" : ["*"],
+              "Resource" : ["arn:aws:s3:::*"]
+            }]
+          },
+          "RouteTableIds" : [ { "Ref" : "RouteTablePublic" }, { "Ref" : "RouteTablePrivate" } ],
+          "ServiceName" : { "Fn::Join": [ "", [ "com.amazonaws.", { "Ref": "AWS::Region" }, ".s3" ] ] },
+          "VpcId" : { "Ref" : "VPC" }
+      }
+    }
+  },
+  "Outputs" : {
+    "PublicSubnetA"  : {
+      "Description" : "Public Subnet in AZ A",
+      "Value" : { "Ref" : "PublicSubnetA" }
+    },
+    "PrivateSubnetA"  : {
+      "Description" : "Private Subnet in AZ A",
+      "Value" : { "Ref" : "PrivateSubnetA" }
+    },
+    "DBSubnetA"  : {
+      "Description" : "DB Subnet in AZ A",
+      "Value" : { "Ref" : "DBSubnetA" }
+    },
+    "VpcId"  : {
+      "Description" : "ID of the VPC created in this template",
+      "Value" : { "Ref" : "VPC" }
+    }
+  }
+}

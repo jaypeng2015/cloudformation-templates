@@ -1,0 +1,96 @@
+{
+  "Description" : "VPC CloudFormation Template for A Single Instance EB in A Public Subnet",
+  "Parameters" : {
+    "ApplicationName" : {
+      "Type" : "String"
+    },
+    "VpcId" : {
+      "Type" : "String",
+      "Description" : "The Id of the vpc where the ec2 instance is going to be put."
+    },
+    "PublicSubnetId" : {
+      "Type" : "String",
+      "Description" : "The subnet Id of the vpc where the ec2 instance is going to be put."
+    }
+  },
+  "Resources" : {
+    "SampleApplication": {
+      "Type" : "AWS::ElasticBeanstalk::Application",
+      "Properties" : {
+         "ApplicationName" : { "Ref" : "ApplicationName" },
+         "Description" : "A Test Application Created from CloudFormation",
+         "ApplicationVersions" : [{
+          "VersionLabel" : "Initial Version",
+          "Description" : "Initial Sample Version",
+          "SourceBundle" : {
+            "S3Bucket" : { "Fn::Join" : ["-", ["elasticbeanstalk-samples", { "Ref" : "AWS::Region" }]]},
+            "S3Key" : "nodejs-sample.zip"
+          }
+        }]
+      }
+    },
+    "SampleEnvironment": {
+       "Type" : "AWS::ElasticBeanstalk::Environment",
+       "Properties" : {
+          "ApplicationName" : { "Ref" : "SampleApplication" },
+          "CNAMEPrefix" : "sample-xXnrEKBGBy3RvtrTPArAJevz",
+          "Description" :  "A Test Environment Created from CloudFormation",
+          "EnvironmentName" :  "cloudformation-test",
+          "OptionSettings" : [
+            {
+              "Namespace" : "aws:elasticbeanstalk:container:nodejs",
+              "OptionName" : "NodeCommand",
+              "Value" : "npm start"
+            },
+            {
+              "Namespace" : "aws:elasticbeanstalk:container:nodejs",
+              "OptionName" : "NodeVersion",
+              "Value" : "8.1.4"
+            },
+            {
+              "Namespace" : "aws:ec2:vpc",
+              "OptionName" : "VPCId",
+              "Value" : { "Ref": "VpcId" }
+            },
+            {
+              "Namespace" : "aws:ec2:vpc",
+              "OptionName" : "Subnets",
+              "Value" : { "Ref" : "PublicSubnetId" }
+            },
+            {
+              "Namespace" : "aws:ec2:vpc",
+              "OptionName" : "AssociatePublicIpAddress",
+              "Value" : true
+            },
+            {
+              "Namespace" : "aws:autoscaling:launchconfiguration",
+              "OptionName" : "InstanceType",
+              "Value" : "t2.micro"
+            },
+            {
+              "Namespace" : "aws:elasticbeanstalk:environment",
+              "OptionName" : "EnvironmentType",
+              "Value" : "SingleInstance"
+            },
+            {
+              "Namespace" : "aws:elasticbeanstalk:environment",
+              "OptionName" : "ServiceRole",
+              "Value" : "aws-elasticbeanstalk-service-role"
+            }
+          ],
+          "SolutionStackName" : "64bit Amazon Linux 2017.03 v4.2.1 running Node.js",
+          "Tier" : {
+            "Name" : "WebServer",
+            "Type" : "Standard"
+         },
+          "VersionLabel" : "Initial Version"
+       }
+    }
+  },
+  "Outputs" : {
+    "URL" : {
+      "Description" : "The URL of the Elastic Beanstalk environment",
+      "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : ["SampleEnvironment", "EndpointURL"] }]]}
+    }
+  }
+}
