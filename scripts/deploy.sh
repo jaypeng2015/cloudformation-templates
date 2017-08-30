@@ -1,5 +1,6 @@
 #!/bin/bash
 
+AWS_PROFILE="${AWS_PROFILE:?\"Missing AWS_PROFILE environment variable -- will not use default profile!\"}"
 STACK_NAME="${STACK_NAME:?\"Missing stack name parameter, e.g. sample-elasticbeanstalk-application\"}"
 TEMPLATE_PATH="${TEMPLATE_PATH:?\"Missing template path parameter, e.g. templates/elestic-beanstalk/single-instance-public-subnet-nodejs.json\"}"
 PARAMETERS=${@}
