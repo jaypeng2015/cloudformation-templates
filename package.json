@@ -26,11 +26,23 @@
   },
   "homepage": "https://github.com/jaypeng2015/cloudformation-templates#readme",
   "devDependencies": {
-    "eslint": "^4.5.0",
-    "eslint-plugin-json": "^1.2.0",
-    "lint-staged": "^4.0.4",
-    "pre-commit": "^1.2.2"
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "eslint": "^6.8.0",
+    "eslint-plugin-json": "^2.0.1",
+    "husky": "^4.2.1",
+    "lint-staged": "^10.0.7"
   },
   "dependencies": {},
-  "pre-commit": "lint:staged"
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-commit": "lerna run --no-bail --concurrency 1 --stream precommit"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  }
 }
